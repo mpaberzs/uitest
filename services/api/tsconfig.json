@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "outDir": "build"
+    "outDir": "build",
+    "moduleResolution": "nodenext",
+    "module": "nodenext"
   },
   "include": ["src"]
 }

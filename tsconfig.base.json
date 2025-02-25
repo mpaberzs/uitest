@@ -18,5 +18,5 @@
       "@todoiti/common": ["../../shared/common/src"]
     },
     "plugins": [{ "transform": "typescript-transform-paths" }]
-  }
+  },
 }

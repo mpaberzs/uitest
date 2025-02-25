@@ -1,9 +1,12 @@
-import type { Task } from '@todoiti/common';
+import List from './components/list';
 
 const App = () => {
-  const task: Task = { name: 'TODO' };
-
-  return <div>{task.name}</div>;
+  return (
+    <div>
+      <h1>Your TODOs</h1>
+      <List />
+    </div>
+  );
 };
 
 export default App;
