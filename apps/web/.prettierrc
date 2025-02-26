@@ -1,7 +1,0 @@
-{
-  "overrides": [
-    "htmlWhitespaceSensitivity": "css",
-    "jsxSingleQuote": false,
-    "jsxBracketSameLine": true
-  ]
-}

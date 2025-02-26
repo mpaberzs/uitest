@@ -44,10 +44,11 @@ router.post('/login', async (req, res, next) => {
       {
         id: user.id,
       },
-      getConfig().jwtSecret,
-      { expiresIn: '4h' }
+      getConfig().jwtAccessSecret,
+      { expiresIn: getConfig().jwtAccessTTL }
     );
 
+    res.cookie(getConfig().jwtAccessCookieName, accessToken, {httpOnly: true, maxAge: getConfig().jwtAccessTTL * 1000});
     res.status(200).json({ message: 'user logged in', accessToken: accessToken });
   } catch (error) {
     if (error instanceof z.ZodError) {

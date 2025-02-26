@@ -1,11 +1,10 @@
 import axios from 'axios';
 import { Task } from '@todoiti/common';
-
-const baseUrl = 'http://localhost:8000';
+import { axiosInstance } from './axios';
 
 export const getTask = async (id: string) => {
   try {
-    return axios.get<Task>(`${baseUrl}/tasks/${id}`);
+    return axiosInstance.get<Task>(`/tasks/${id}`);
   } catch (error: any) {
     console.error(`error fetching task ${id}: ${error?.response?.data || error?.message}`);
     throw error;
@@ -14,7 +13,7 @@ export const getTask = async (id: string) => {
 
 export const getTasks = async () => {
   try {
-    const response = await axios.get<Task[]>(`${baseUrl}/tasks`);
+    const response = await axiosInstance.get<Task[]>(`/tasks`);
     return response.data;
   } catch (error: any) {
     console.error(`error fetching tasks: ${error?.response?.data || error?.message}`);
@@ -24,7 +23,7 @@ export const getTasks = async () => {
 
 export const createTask = async (payload: Pick<Task, 'name' | 'description'>) => {
   try {
-    const response = await axios.post<{ id: string }>(`${baseUrl}/task`, payload);
+    const response = await axiosInstance.post<{ id: string }>(`/task`, payload);
     return response.data;
   } catch (error: any) {
     console.error(`error fetching tasks: ${error?.response?.data || error?.message}`);
@@ -34,7 +33,7 @@ export const createTask = async (payload: Pick<Task, 'name' | 'description'>) =>
 
 export const updateTask = async (payload: Pick<Task, 'name' | 'description' | 'status'>) => {
   try {
-    const response = await axios.patch<{ success: true }>(`${baseUrl}/task`, payload);
+    const response = await axiosInstance.patch<{ success: true }>(`/task`, payload);
     return response.data;
   } catch (error: any) {
     console.error(`error fetching tasks: ${error?.response?.data || error?.message}`);

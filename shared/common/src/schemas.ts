@@ -1,5 +1,6 @@
 import z from 'zod';
 
+export const taskStatusSchema = z.enum(['active', 'done', 'hidden']);
 export const taskListAccessSchema = z.object({
   id: z.number(),
   task_list_id: z.string(),
@@ -8,14 +9,14 @@ export const taskListAccessSchema = z.object({
   created_at: z.number(),
   updated_at: z.number(),
   expires_at: z.number().optional(),
-  level: z.number().int().min(1).max(3) // 1: read, 2: write, 3: admin
+  level: z.number().int().min(0).max(3), // 0: suspended; 1: read, 2: write, 3: admin
 });
 
 export const taskListSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  status: z.string(),
-  description: z.string(),
+  status: taskStatusSchema,
+  description: z.string().optional(),
   created_at: z.number(),
   updated_at: z.number(),
   created_by: z.string(),
@@ -25,12 +26,14 @@ export const taskSchema = z.object({
   id: z.string().uuid(),
   task_list_id: z.string().uuid(),
   name: z.string(),
-  status: z.string(),
-  description: z.string(),
+  status: taskStatusSchema,
+  description: z.string().optional(),
   created_at: z.number(),
   updated_at: z.number(),
   created_by: z.string(),
 });
+
+export const taskListWithTasksSchema = taskListSchema.extend({ tasks: z.array(taskSchema) });
 
 export const userSchema = z.object({
   id: z.string().uuid(),

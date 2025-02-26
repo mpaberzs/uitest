@@ -6,11 +6,15 @@ import userRoutes from './userRoutes';
 import taskListRoutes from './taskListRoutes';
 import passport from 'passport';
 import { getConfig } from './lib/config';
+import CookieParser from 'cookie-parser';
 import './lib/passport';
 
 const app = express();
-app.use(cors());
+app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(CookieParser());
 
 app.get('/probe', async (req, res) => {
   res.send('todoiti api');
@@ -23,5 +27,5 @@ app.use('/v1/task-lists', passport.authenticate('jwt', { session: false }), task
 
 const config = getConfig();
 app.listen(config.apiPort, () => {
-  console.info('API running on port:', config.apiPort)
+  console.info('API running on port:', config.apiPort);
 });
