@@ -2,10 +2,14 @@ import { axiosInstance } from './axios';
 
 export const login = async (email: string, password: string) => {
   try {
-    return axiosInstance.post<{ id: string }>(
+    const response = await axiosInstance.post<{ user: { id: string }; accessToken: string }>(
       `/v1/auth/login`,
-      { email, password },
+      {
+        email,
+        password,
+      }
     );
+    return response.data;
   } catch (error: any) {
     console.error(`error logging in: ${error?.response?.data || error?.message}`);
     throw error;
@@ -14,10 +18,26 @@ export const login = async (email: string, password: string) => {
 
 export const signup = async (email: string, password: string) => {
   try {
-    return axiosInstance.post<{ id: string }>(
-      `/v1/auth/register`,
-      { email, password },
-    );
+    const response = await axiosInstance.post<{ id: string }>(`/v1/auth/register`, {
+      email,
+      password,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error(`error logging in: ${error?.response?.data || error?.message}`);
+    throw error;
+  }
+};
+
+export const whoami = async () => {
+  try {
+    const response = await axiosInstance.get<{
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+    }>('/v1/users/whoami');
+    return response.data;
   } catch (error: any) {
     console.error(`error logging in: ${error?.response?.data || error?.message}`);
     throw error;

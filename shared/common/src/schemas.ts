@@ -12,16 +12,6 @@ export const taskListAccessSchema = z.object({
   level: z.number().int().min(0).max(3), // 0: suspended; 1: read, 2: write, 3: admin
 });
 
-export const taskListSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  status: taskStatusSchema,
-  description: z.string().optional(),
-  created_at: z.number(),
-  updated_at: z.number(),
-  created_by: z.string(),
-});
-
 export const taskSchema = z.object({
   id: z.string().uuid(),
   task_list_id: z.string().uuid(),
@@ -33,7 +23,16 @@ export const taskSchema = z.object({
   created_by: z.string(),
 });
 
-export const taskListWithTasksSchema = taskListSchema.extend({ tasks: z.array(taskSchema) });
+export const taskListSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  status: taskStatusSchema,
+  description: z.string().optional(),
+  created_at: z.number(),
+  updated_at: z.number(),
+  created_by: z.string(),
+  tasks: z.array(taskSchema).optional(),
+});
 
 export const userSchema = z.object({
   id: z.string().uuid(),

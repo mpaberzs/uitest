@@ -4,11 +4,7 @@ import { getConfig } from './config';
 import { getAuthUserById } from './models/userModel';
 
 const opts = {
-  jwtFromRequest: ExtractJwt.fromExtractors([
-    (req: Request) => {
-      return (req as any).cookies[getConfig().jwtAccessCookieName];
-    },
-  ]),
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey: getConfig().jwtAccessSecret,
 };
 

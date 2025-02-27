@@ -7,16 +7,28 @@ import taskListRoutes from './taskListRoutes';
 import passport from 'passport';
 import { getConfig } from './lib/config';
 import CookieParser from 'cookie-parser';
-import './lib/passport';
+import morgan from 'morgan';
+import './lib/passport-jwt-strategy';
+
+const morganLogger = morgan('combined', {
+  skip: function (req: any) {
+    // ignore k8s probe route
+    return req.url === '/probe';
+  },
+});
 
 const app = express();
-app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(cors({ credentials: true, origin: `http://${getConfig().webAppHost}` }));
+
 app.use(CookieParser());
 
-app.get('/probe', async (req, res) => {
+app.use(morganLogger);
+
+app.get('/probe', async (_, res) => {
   res.send('todoiti api');
 });
 

@@ -50,7 +50,7 @@ export const createTaskList = async (
     await tx.query(
       sql.unsafe`INSERT INTO task_list_access (task_list_id, delegated_to, delegated_by, level) SELECT * FROM ${sql.unnest(
         [[id, userId, userId, TaskListAccessLevel.admin]],
-        ['uuid', 'uuid', 'uuid', 'text']
+        ['uuid', 'uuid', 'uuid', 'int4']
       )}`
     );
   });

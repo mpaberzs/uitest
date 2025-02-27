@@ -14,7 +14,6 @@ const router = Router();
 
 router.get('/:taskListId', async (req, res) => {
   try {
-    console.info('debug', req.params, req.query);
     const params = z
       .object({
         taskListId: z.string().uuid(),
@@ -24,11 +23,8 @@ router.get('/:taskListId', async (req, res) => {
     const access = await getUserTaskListAccess((req.user as any).id, params.taskListId);
     if (access && access.level > TaskListAccessLevel.suspended) {
       const taskList = await getTaskListById(params.taskListId, (req.user as any).id);
-      let tasks: readonly Task[] = [];
-      if (Boolean(req.query.withTasks)) {
-        tasks = await getTaskListTasks(params.taskListId);
-      }
-      res.json({...taskList, tasks });
+      const tasks = await getTaskListTasks(params.taskListId);
+      res.json({ ...taskList, tasks });
     } else {
       res.status(403).json({ message: 'No access' });
     }
@@ -46,7 +42,14 @@ router.get('', async (req, res) => {
   try {
     const taskLists = await getTaskLists((req.user as any).id, Boolean(req.query.onlyPersonal));
 
-    res.json(taskLists);
+    const taskListsWithTasks = await Promise.all(
+      taskLists.map(async (taskList) => ({
+        ...taskList,
+        tasks: await getTaskListTasks(taskList.id),
+      }))
+    );
+
+    res.json(taskListsWithTasks);
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error('Validation failed: ', error.issues[0]);
@@ -68,7 +71,8 @@ router.post('', async (req, res) => {
     const id = await createTaskList(body, (req.user as any).id);
 
     res.json({ id });
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`Error while adding task list: ${error?.message}`)
     if (error instanceof z.ZodError) {
       console.error('Validation failed: ', error.issues[0]);
       res.status(400).json(error.issues[0]);

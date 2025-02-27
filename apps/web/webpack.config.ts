@@ -18,6 +18,7 @@ const webpackConfig = (env: any) => ({
     // path: path.join(__dirname, "/build"),
     path: path.resolve(process.cwd(), 'build'),
     filename: 'index.js',
+    publicPath: '/',
   },
   module: {
     rules: [

@@ -5,7 +5,7 @@ import MuiCard from '@mui/material/Card';
 import { styled } from '@mui/material/styles';
 import { useParams } from 'react-router';
 import { getTaskList } from 'src/lib/api/taskListsApi';
-import type { TaskList, TaskListWithTasks } from '@todoiti/common';
+import type { TaskList } from '@todoiti/common';
 import { Button, colors, Container, Snackbar } from '@mui/material';
 import { Grid2 as Grid } from '@mui/material';
 
@@ -13,7 +13,7 @@ const Card = styled(MuiCard)(({ theme }) => ({}));
 
 export default function TaskList(props: { disableCustomTheme?: boolean }) {
   const params = useParams();
-  const [taskList, setTaskList] = React.useState<TaskListWithTasks | null>(null);
+  const [taskList, setTaskList] = React.useState<TaskList | null>(null);
   const [isSnackbarOpen, setIsSnackbarOpen] = React.useState(false);
   const [snackbarMessage, setSnackbarMessage] = React.useState('');
 
@@ -22,7 +22,7 @@ export default function TaskList(props: { disableCustomTheme?: boolean }) {
 
   React.useEffect(() => {
     if (params.id) {
-      getTaskList(params.id, true)
+      getTaskList(params.id)
         .then((list) => {
           setTaskList(list);
         })
@@ -34,11 +34,7 @@ export default function TaskList(props: { disableCustomTheme?: boolean }) {
   }, [params.id]);
 
   return (
-    <Container
-      maxWidth="lg"
-      component="main"
-      sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 4 }}
-    >
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <Snackbar
         open={isSnackbarOpen}
         autoHideDuration={6000}
@@ -47,26 +43,32 @@ export default function TaskList(props: { disableCustomTheme?: boolean }) {
         color={colors.red['600']}
       />
       {taskList ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div>
-            <Typography variant="h1" align="center" gutterBottom>
-              {taskList.name}
-            </Typography>
-          </div>
-          <Grid container spacing={2}>
-            {taskList.tasks.map((task) => (
-              <Grid size={12}>
-                <Card variant="outlined" style={{ padding: '10px' }}>
-                  <Typography component="h1" variant="h4">
-                    {task.name}
-                  </Typography>
-                </Card>
+        <Card variant="outlined" style={{ padding: '15px' }}>
+          <Typography component="h1" variant="h1">{taskList.name}</Typography>
+          {taskList.description ? (
+            <Typography component="p">{taskList.description}</Typography>
+          ) : null}
+          {(taskList.tasks || []).length > 0 ? 
+
+            <>
+          <Typography component="h2" variant="h2">tasks</Typography>
+          {
+            taskList.tasks!.map((task) => (
+              <Grid container spacing={2}>
+                <Grid size={12}>
+                  <Typography>{task.name}</Typography>
+                  <Typography>{task.description}</Typography>
+                  <Typography>{task.status}</Typography>
+                </Grid>
               </Grid>
-            ))}
-          </Grid>
-          <Button onClick={addTaskToTaskList}>Add Task</Button>
-      </Box>
+            ))
+          }</> : (
+            <Typography component="p" color="textSecondary">
+              {taskList.tasks?.length ?? 0} tasks
+            </Typography>
+          )}
+        </Card>
       ) : null}
-    </Container>
+    </Box>
   );
 }

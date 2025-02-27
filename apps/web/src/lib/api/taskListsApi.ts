@@ -1,11 +1,9 @@
-import { TaskList, TaskListWithTasks } from '@todoiti/common';
+import { TaskList } from '@todoiti/common';
 import { axiosInstance } from './axios';
 
-export const getTaskList = async (taskListId: string, withTasks = false) => {
+export const getTaskList = async (taskListId: string) => {
   try {
-    const response = await axiosInstance.get<TaskListWithTasks>(`/v1/task-lists/${taskListId}`, {
-      params: { withTasks },
-    });
+    const response = await axiosInstance.get<TaskList>(`/v1/task-lists/${taskListId}`);
     return response.data;
   } catch (error: any) {
     console.error(`error fetching task ${taskListId}: ${error?.response?.data || error?.message}`);
@@ -23,7 +21,7 @@ export const getTaskLists = async () => {
   }
 };
 
-export const createTask = async (payload: Pick<TaskList, 'name' | 'description'>) => {
+export const createTaskList = async (payload: Pick<TaskList, 'name' | 'description'>) => {
   try {
     const response = await axiosInstance.post<{ id: string }>(`/v1/task-lists`, payload);
     return response.data;
@@ -33,7 +31,7 @@ export const createTask = async (payload: Pick<TaskList, 'name' | 'description'>
   }
 };
 
-export const updateTask = async (
+export const updateTaskList = async (
   taskListId: string,
   payload: Pick<TaskList, 'name' | 'description' | 'status'>
 ) => {
