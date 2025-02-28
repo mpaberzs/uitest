@@ -12,6 +12,14 @@ export const taskListAccessSchema = z.object({
   level: z.number().int().min(0).max(3), // 0: suspended; 1: read, 2: write, 3: admin
 });
 
+export const createTaskSchema = z.object({
+  name: z.string(),
+  status: taskStatusSchema,
+  description: z.string().optional(),
+});
+
+export const updateTaskSchema = createTaskSchema.extend({});
+
 export const taskSchema = z.object({
   id: z.string().uuid(),
   task_list_id: z.string().uuid(),
@@ -53,6 +61,14 @@ export const createUserSchema = z.object({
   // FIXME: stronger password validation e.g. https://forum.codewithmosh.com/t/password-complexity-for-zod/23622
   password: z.string().min(8),
 });
+
+export const createTaskListSchema = z.object({
+  name: z.string().min(3),
+  description: z.string().optional(),
+  status: taskStatusSchema,
+});
+
+export const updateTaskListSchema = createTaskListSchema.extend({});
 
 export const userLoginSchema = z.object({
   email: z.string().email(),

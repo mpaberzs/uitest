@@ -1,4 +1,4 @@
-import { TaskList } from '@todoiti/common';
+import { CreateTaskList, TaskList } from '@todoiti/common';
 import { axiosInstance } from './axios';
 
 export const getTaskList = async (taskListId: string) => {
@@ -21,7 +21,7 @@ export const getTaskLists = async () => {
   }
 };
 
-export const createTaskList = async (payload: Pick<TaskList, 'name' | 'description'>) => {
+export const createTaskList = async (payload: CreateTaskList) => {
   try {
     const response = await axiosInstance.post<{ id: string }>(`/v1/task-lists`, payload);
     return response.data;
@@ -42,7 +42,17 @@ export const updateTaskList = async (
     );
     return response.data;
   } catch (error: any) {
-    console.error(`error fetching tasks: ${error?.response?.data || error?.message}`);
+    console.error(`error fetching task list: ${error?.response?.data || error?.message}`);
+    throw error;
+  }
+};
+
+export const deleteTaskList = async (taskListId: string) => {
+  try {
+    const response = await axiosInstance.delete<{ success: boolean }>(`/v1/task-lists/${taskListId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`error deleting task list: ${error?.response?.data || error?.message}`);
     throw error;
   }
 };

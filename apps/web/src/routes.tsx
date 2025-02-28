@@ -23,4 +23,5 @@ const TodoitiRoutes = () => (
     <Route path="*" element={<div>Not Found</div>} />
   </Routes>
 );
+
 export default TodoitiRoutes;

@@ -1,20 +1,23 @@
-import { useContext, useEffect } from 'react';
+import { useCallback, useContext, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router';
-import { UserContext } from './lib/user-context';
-import { colors, Container, Stack, styled } from '@mui/material';
-import { whoami } from './lib/api/authApi';
+import { Box, Button, colors, Container, styled, Typography } from '@mui/material';
+import { logout, whoami } from './lib/api/authApi';
 import { HttpStatusCode } from 'axios';
+import { NotificationsProvider, useNotifications } from '@toolpad/core/useNotifications';
+import { DialogsProvider } from '@toolpad/core/useDialogs';
+import { UserContext } from './app';
 
-const ProtectedStack = styled(Stack)(({ theme }) => ({
-  height: 'calc((1 - var(--template-frame-height, 0)) * 100dvh)',
-  margin: 0,
-  minHeight: '100%',
-  backgroundColor: colors.orange['300'],
+const ProtectedRouteContainer = styled(Container)(({ theme }) => ({
+  padding: '60px 0',
+  display: 'flex',
+  flexDirection: 'column',
+  backgroundColor: colors.common.white,
 }));
 
 const ProtectedRoute = () => {
   const ctx = useContext(UserContext);
   const navigate = useNavigate();
+  const notifications = useNotifications();
 
   useEffect(() => {
     let isMounted = true;
@@ -42,16 +45,59 @@ const ProtectedRoute = () => {
     };
   }, []);
 
+  const handleLogout = useCallback(() => {
+    logout()
+      .then((result) => {
+        if (result.success) {
+          ctx.setUser(null);
+        }
+        navigate('/login');
+      })
+      .catch((error) => {
+        notifications.show(
+          `Error while logging out ${error?.response?.data?.message || error?.message}`,
+          {
+            severity: 'error',
+            autoHideDuration: 30_000,
+          }
+        );
+      });
+  }, []);
+
+  const userString = ctx.user?.id
+    ? ctx.user?.firstName
+      ? `${ctx.user?.firstName}${ctx.user?.lastName ? ` ${ctx.user?.lastName}` : ''}`
+      : ctx.user?.email
+    : '';
+
   return (
-    <ProtectedStack>
-      <Container
-        maxWidth="lg"
-        component="main"
-        sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 4 }}
-      >
-        <Outlet />
-      </Container>
-    </ProtectedStack>
+    <NotificationsProvider>
+      <DialogsProvider>
+        <ProtectedRouteContainer maxWidth="lg">
+          {userString ? (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                padding: '15px 0',
+              }}
+            >
+              <Box>
+                <Typography component="p" variant="body1">
+                  {userString}
+                </Typography>
+              </Box>
+              <Box sx={{ marginRight: '15px' }}>
+                <Button onClick={handleLogout}>Logout</Button>
+              </Box>
+            </Box>
+          ) : null}
+          <Outlet />
+        </ProtectedRouteContainer>
+      </DialogsProvider>
+    </NotificationsProvider>
   );
 };
 

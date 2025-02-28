@@ -2,23 +2,28 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import MuiCard from '@mui/material/Card';
-import { styled } from '@mui/material/styles';
+import CreateIcon from '@mui/icons-material/Create';
 import {
   Button,
-  colors,
+  CircularProgress,
   FormControl,
   FormLabel,
   Grid2 as Grid,
-  Snackbar,
+  styled,
   TextareaAutosize,
   TextField,
 } from '@mui/material';
-import { NavLink, useNavigate } from 'react-router';
-import { createTaskList, getTaskList, getTaskLists } from 'src/lib/api/taskListsApi';
-import { TaskList } from '@todoiti/common';
+import { useNavigate } from 'react-router';
+import { createTaskList, getTaskLists } from 'src/lib/api/taskListsApi';
+import { TaskList, taskStatusSchema } from '@todoiti/common';
 import z from 'zod';
+import { useNotifications } from '@toolpad/core/useNotifications';
 
-const Card = styled(MuiCard)(({ theme }) => ({}));
+const TaskListCard = styled(MuiCard)(({ theme }) => ({
+  '&:hover': {
+    cursor: 'pointer',
+  },
+}));
 
 const FormCard = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -31,24 +36,43 @@ const FormCard = styled(MuiCard)(({ theme }) => ({
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [lists, setLists] = React.useState<TaskList[]>([]);
-  const [isSnackbarOpen, setIsSnackbarOpen] = React.useState(false);
-  const [snackbarMessage, setSnackbarMessage] = React.useState('');
+  const notifications = useNotifications();
+  const [taskLists, setTaskLists] = React.useState<TaskList[]>([]);
 
   const [nameError, setNameError] = React.useState('');
 
-  const [name, setName] = React.useState('');
-  const [description, setDescription] = React.useState('');
+  const [taskListName, setTaskListName] = React.useState('');
+  const [taskListDescription, setTaskListDescription] = React.useState('');
+
+  const [isTaskListsLoading, setIsTaskListsLoading] = React.useState(true);
+
+  const refreshTaskLists = React.useCallback(async () => {
+    try {
+      setIsTaskListsLoading(true);
+      const lists = await getTaskLists();
+      setTaskLists(lists);
+    } catch (error: any) {
+      notifications.show(
+        `Error refreshing TODO lists: ${error?.response?.data?.message || error?.message}`,
+        {
+          severity: 'error',
+          autoHideDuration: 10_000,
+        }
+      );
+    } finally {
+      setIsTaskListsLoading(false);
+    }
+  }, [getTaskLists]);
 
   const handleSubmit = React.useCallback(
-    (e: any) => {
+    async (e: any) => {
       e.preventDefault();
       e.stopPropagation();
 
       setNameError('');
       let nameForm = '';
       try {
-        nameForm = z.string().min(3).parse(name);
+        nameForm = z.string().min(3).parse(taskListName);
       } catch (error) {
         if (error instanceof z.ZodError) {
           setNameError(error.issues[0]?.message ?? '');
@@ -58,24 +82,49 @@ const Dashboard = () => {
         return;
       }
 
-      createTaskList({ name: nameForm, description }).then(() => {
-        setName('');
-        setDescription('');
-        getTaskLists().then((lists) => {
-          setLists(lists);
+      try {
+        await createTaskList({ name: nameForm, description: taskListDescription, status: 'active' });
+        notifications.show(`TODO list "${nameForm}" created successfully`, {
+          severity: 'success',
+          autoHideDuration: 10_000,
         });
-      });
+        setTaskListName('');
+        setTaskListDescription('');
+
+        refreshTaskLists();
+      } catch (error: any) {
+        notifications.show(
+          `Error creating TODO list "${nameForm}": ${error?.response?.data?.message || error?.message}`,
+          {
+            severity: 'error',
+            autoHideDuration: 10_000,
+          }
+        );
+      }
     },
-    [nameError, name, description]
+    [
+      nameError,
+      setTaskListName,
+      setTaskListDescription,
+      setTaskLists,
+      notifications,
+      taskListName,
+      taskListDescription,
+    ]
   );
 
-  const closeSnackbar = React.useCallback(() => setIsSnackbarOpen(false), []);
+  const handleOpenTaskList = React.useCallback(
+    (taskListId: string) => () => {
+      navigate(`todos/${taskListId}`);
+    },
+    [navigate]
+  );
 
   React.useEffect(() => {
     let isMounted = true;
     getTaskLists()
       .then((lists) => {
-        isMounted && setLists(lists as any);
+        isMounted && setTaskLists(lists as any);
       })
       .catch((error) => {
         if (error?.response?.status === 401 || error?.response?.status === 403) {
@@ -83,43 +132,61 @@ const Dashboard = () => {
           return;
         }
         if (isMounted) {
-          setSnackbarMessage('Failed to fetch tasks');
-          setIsSnackbarOpen(true);
+          notifications.show(
+            `Error fetching TODO lists: ${error?.response?.data?.message || error?.message}`,
+            {
+              severity: 'error',
+              autoHideDuration: 10_000,
+            }
+          );
         }
+      })
+      .finally(() => {
+        setIsTaskListsLoading(false);
       });
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [getTaskLists, setTaskLists, navigate, notifications]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Snackbar
-        open={isSnackbarOpen}
-        autoHideDuration={6000}
-        onClose={closeSnackbar}
-        message={snackbarMessage}
-        color={colors.red['600']}
-      />
-      <div>
-        <Typography variant="h1" align="center" gutterBottom>
+      <Box>
+        <Typography component="h1" variant="h1" align="center" gutterBottom>
           Your TODO lists
         </Typography>
-      </div>
+      </Box>
       <Grid container spacing={2}>
-        {lists.map((list) => (
-          <Grid size={lists.length >= 3 ? 4 : 12 / lists.length}>
-            <Card variant="outlined" style={{ padding: '10px' }}>
-              <Typography component="h4">
-                <NavLink to={`todos/${list.id}`}>{list.name}</NavLink>
-              </Typography>
-              {list.description ? <Typography component="p">{list.description}</Typography> : null}
-              <Typography component="p" color="textSecondary">
-                {list.tasks?.length ?? 0} tasks
-              </Typography>
-            </Card>
-          </Grid>
-        ))}
+        {isTaskListsLoading ? (
+          <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
+            <CircularProgress />
+          </Box>
+        ) : taskLists.length === 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
+            <Typography component="h2" variant="h2">
+              You have no TODO lists yet!
+            </Typography>
+          </Box>
+        ) : (
+          taskLists.map((taskList) => (
+            <Grid
+              size={taskLists.length >= 3 ? 4 : 12 / taskLists.length}
+              onClick={handleOpenTaskList(taskList.id)}
+            >
+              <TaskListCard variant="outlined" style={{ padding: '10px' }}>
+                <Typography component="h4" variant="h4">
+                  {taskList.name}
+                </Typography>
+                {taskList.description ? (
+                  <Typography component="p">{taskList.description}</Typography>
+                ) : null}
+                <Typography component="p" color="textSecondary">
+                  {taskList.tasks?.length ?? 0} tasks
+                </Typography>
+              </TaskListCard>
+            </Grid>
+          ))
+        )}
 
         <FormCard>
           <Box
@@ -143,10 +210,9 @@ const Dashboard = () => {
                 name="name"
                 placeholder="TODO list name"
                 fullWidth
-                variant="outlined"
                 color={nameError ? 'error' : 'primary'}
-                onChange={(event) => setName(event.target.value)}
-                value={name}
+                onChange={(event) => setTaskListName(event.target.value)}
+                value={taskListName}
               />
             </FormControl>
             <FormControl>
@@ -155,14 +221,13 @@ const Dashboard = () => {
                 name="description"
                 placeholder="TODO list description"
                 id="description"
-                autoComplete="current-description"
                 color="primary"
-                onChange={(event) => setDescription(event.target.value)}
-                value={description}
+                onChange={(event) => setTaskListDescription(event.target.value)}
+                value={taskListDescription}
                 minRows={10}
               />
             </FormControl>
-            <Button type="submit" fullWidth variant="contained">
+            <Button type="submit" color="primary" startIcon={<CreateIcon />} variant="contained">
               Create
             </Button>
           </Box>

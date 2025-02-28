@@ -1,126 +1,149 @@
 import { Router } from 'express';
-import { createTask, getTaskById, getTaskListTasks, updateTask } from './lib/models/taskModel';
-import { getUserTaskListAccess } from './lib/models/taskListAccessModel';
+import {
+  createTask,
+  deleteTask,
+  getTaskById,
+  getTaskListTasks,
+  updateTask,
+} from './lib/models/taskModel';
 import z from 'zod';
-import { TaskListAccessLevel, taskStatusSchema } from '@todoiti/common';
+import { createTaskSchema, TaskListAccessLevel, taskStatusSchema } from '@todoiti/common';
+import checkTaskListAccessMiddleware from './lib/taskListAccessMiddleware';
 
 const router = Router();
 
-router.get('/:taskListId/:taskId', async (req, res) => {
-  try {
-    const params = z
-      .object({
-        taskId: z.string().uuid(),
-        taskListId: z.string().uuid(),
-      })
-      .parse(req.params);
+router.get(
+  '/:taskListId/:taskId',
+  checkTaskListAccessMiddleware(TaskListAccessLevel.read),
+  async (req, res) => {
+    try {
+      const params = z
+        .object({
+          taskId: z.string().uuid(),
+          taskListId: z.string().uuid(),
+        })
+        .parse(req.params);
 
-    const access = await getUserTaskListAccess((req.user as any).id, params.taskListId);
-    if (access && access.level > TaskListAccessLevel.suspended) {
       const task = await getTaskById(params.taskId, params.taskListId);
       res.json(task);
-    } else {
-      res.status(403).json({ message: 'No access' });
-    }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('Validation failed: ', error.issues[0]);
-      res.status(400).json(error.issues[0]);
-    } else {
-      res.status(500).json({ message: 'Something went wrong' });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('Validation failed: ', error.issues[0]);
+        res.status(400).json(error.issues[0]);
+      } else {
+        res.status(500).json({ message: 'Something went wrong' });
+      }
     }
   }
-});
+);
 
-router.get('/:taskListId', async (req, res) => {
-  try {
-    const params = z
-      .object({
-        taskListId: z.string().uuid(),
-      })
-      .parse(req.params);
+router.get(
+  '/:taskListId',
+  checkTaskListAccessMiddleware(TaskListAccessLevel.read),
+  async (req, res) => {
+    try {
+      const params = z
+        .object({
+          taskListId: z.string().uuid(),
+        })
+        .parse(req.params);
 
-    const access = await getUserTaskListAccess((req.user as any).id, params.taskListId);
-    if (access && access.level > TaskListAccessLevel.suspended) {
       const tasks = await getTaskListTasks(params.taskListId);
       res.json(tasks);
-    } else {
-      res.status(403).json({ message: 'No access' });
-    }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('Validation failed: ', error.issues[0]);
-      res.status(400).json(error.issues[0]);
-    } else {
-      res.status(500).json({ message: 'Something went wrong' });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('Validation failed: ', error.issues[0]);
+        res.status(400).json(error.issues[0]);
+      } else {
+        res.status(500).json({ message: 'Something went wrong' });
+      }
     }
   }
-});
+);
 
-router.post('/:taskListId', async (req, res) => {
-  try {
-    z.object({
-      taskListId: z.string().uuid(),
-    }).parse(req.params);
+router.post(
+  '/:taskListId',
+  checkTaskListAccessMiddleware(TaskListAccessLevel.write),
+  async (req, res) => {
+    try {
+      const params = z
+        .object({
+          taskListId: z.string().uuid(),
+        })
+        .parse(req.params);
 
-    const body = z
-      .object({
-        name: z.string().min(3),
-        description: z.string().optional(),
-        task_list_id: z.string().uuid(),
-      })
-      .parse(req.body);
+      const body = createTaskSchema.parse(req.body);
 
-    const access = await getUserTaskListAccess((req.user as any).id, body.task_list_id);
-    if (access && access.level > TaskListAccessLevel.read) {
-      const id = await createTask(body);
+      const id = await createTask(body, params.taskListId);
 
       res.json({ id });
-    } else {
-      res.status(403).json({ message: 'No access' });
-    }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('Validation failed: ', error.issues[0]);
-      res.status(400).json(error.issues[0]);
-    } else {
-      res.status(500).json({ message: 'Something went wrong' });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('Validation failed: ', error.issues[0]);
+        res.status(400).json(error.issues[0]);
+      } else {
+        res.status(500).json({ message: 'Something went wrong' });
+      }
     }
   }
-});
+);
 
-router.patch('/:taskListId/:taskId', async (req, res) => {
-  try {
-    const params = z
-      .object({
-        taskId: z.string().uuid(),
-        taskListId: z.string().uuid(),
-      })
-      .parse(req.params);
+router.patch(
+  '/:taskListId/:taskId',
+  checkTaskListAccessMiddleware(TaskListAccessLevel.write),
+  async (req, res) => {
+    try {
+      const params = z
+        .object({
+          taskId: z.string().uuid(),
+          taskListId: z.string().uuid(),
+        })
+        .parse(req.params);
 
-    const body = z
-      .object({
-        name: z.string().min(3),
-        description: z.string().optional(),
-        status: taskStatusSchema,
-      })
-      .parse(req.body);
+      const body = z
+        .object({
+          name: z.string().min(3),
+          description: z.string().optional(),
+          status: taskStatusSchema,
+        })
+        .parse(req.body);
 
-    const access = await getUserTaskListAccess((req.user as any).id, params.taskListId);
-    if (access && access.level > TaskListAccessLevel.read) {
       await updateTask(params.taskId, body, params.taskListId);
       res.json({ success: true });
-    } else {
-      res.status(403).json({ message: 'No access' });
-    }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('Validation failed: ', error.issues[0]);
-      res.status(400).json(error.issues[0]);
-    } else {
-      res.status(500).json({ message: 'Something went wrong' });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('Validation failed: ', error.issues[0]);
+        res.status(400).json(error.issues[0]);
+      } else {
+        res.status(500).json({ message: 'Something went wrong' });
+      }
     }
   }
-});
+);
+
+router.delete(
+  '/:taskListId/:taskId',
+  checkTaskListAccessMiddleware(TaskListAccessLevel.write),
+  async (req, res) => {
+    try {
+      const params = z
+        .object({
+          taskId: z.string().uuid(),
+          taskListId: z.string().uuid(),
+        })
+        .parse(req.params);
+
+      await deleteTask(params.taskId, params.taskListId);
+      res.json({ success: true });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('Validation failed: ', error.issues[0]);
+        res.status(400).json(error.issues[0]);
+      } else {
+        res.status(500).json({ message: 'Something went wrong' });
+      }
+    }
+  }
+);
 
 export default router;

@@ -8,9 +8,14 @@ import {
   userLoginSchema,
   userSchema,
   taskListAccessSchema,
+  createTaskSchema,
 } from './schemas';
 
 export type Task = z.infer<typeof taskSchema>;
+export type CreateTaskList = z.infer<typeof createTaskSchema>;
+export type UpdateTaskList = z.infer<typeof createTaskSchema>;
+export type CreateTask = z.infer<typeof createTaskSchema>;
+export type UpdateTask = z.infer<typeof createTaskSchema>;
 export type TaskList = z.infer<typeof taskListSchema>;
 export type TaskListAccess = z.infer<typeof taskListAccessSchema>;
 export type User = z.infer<typeof userSchema>;

@@ -1,4 +1,4 @@
-import { Task, taskSchema } from '@todoiti/common';
+import { CreateTask, Task, taskSchema } from '@todoiti/common';
 import database from '../database';
 import { sql } from 'slonik';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,16 +23,14 @@ export const getTaskById = async (id: string, taskListId: string): Promise<Task 
   );
 };
 
-export const createTask = async (
-  payload: Pick<Task, 'name' | 'description' | 'task_list_id'>
-): Promise<string> => {
+export const createTask = async (payload: CreateTask, taskListId: string): Promise<string> => {
   const connection = await database();
   const id = uuidv4();
 
   await connection.query(
-    sql.unsafe`INSERT INTO tasks (id, name, description, task_list_id) SELECT * FROM ${sql.unnest(
-      [[id, payload.name, payload.description ?? '', payload.task_list_id]],
-      ['uuid', 'text', 'text', 'uuid']
+    sql.unsafe`INSERT INTO tasks (id, name, description, task_list_id, status) SELECT * FROM ${sql.unnest(
+      [[id, payload.name, payload.description ?? '', taskListId, payload.status]],
+      ['uuid', 'text', 'text', 'uuid', 'text']
     )}`
   );
   return id;
@@ -46,6 +44,16 @@ export const updateTask = async (
   const connection = await database();
 
   await connection.query(
+    // also check task_list_id to prevent payload forgery
     sql.unsafe`UPDATE tasks SET name = ${payload.name}, description = ${payload.description ?? ''}, status = ${payload.status} WHERE id = ${id} AND task_list_id = ${taskListId}`
+  );
+};
+
+export const deleteTask = async (id: string, taskListId: string): Promise<void> => {
+  const connection = await database();
+
+  await connection.query(
+    // also check task_list_id to prevent payload forgery
+    sql.unsafe`DELETE FROM tasks WHERE id = ${id} AND task_list_id = ${taskListId}`
   );
 };

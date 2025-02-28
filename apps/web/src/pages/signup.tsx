@@ -9,9 +9,10 @@ import Typography from '@mui/material/Typography';
 import z from 'zod';
 import { signup } from 'src/lib/api/authApi';
 import { NavLink, useNavigate } from 'react-router';
-import { Snackbar } from '@mui/material';
+import { useNotifications } from '@toolpad/core/useNotifications';
 
 const Signup = () => {
+  const notifications = useNotifications();
   const navigate = useNavigate();
 
   const [email, setEmail] = React.useState('');
@@ -19,12 +20,6 @@ const Signup = () => {
 
   const [emailError, setEmailError] = React.useState('');
   const [passwordError, setPasswordError] = React.useState('');
-
-  const [snackbarText, setSnackbarText] = React.useState('');
-
-  const [isSnackbarOpen, setIsSnackbarOpen] = React.useState(false);
-
-  const closeSnackbar = React.useCallback(() => setIsSnackbarOpen(false), []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -63,19 +58,15 @@ const Signup = () => {
         navigate('/login', { replace: true });
       })
       .catch((err) => {
-        setSnackbarText(err?.response?.data?.message || err?.message);
-        setIsSnackbarOpen(true);
+        notifications.show(err?.response?.data?.message || err?.message, {
+          severity: 'error',
+          autoHideDuration: 10_000,
+        })
       });
   };
 
   return (
     <>
-      <Snackbar
-        open={isSnackbarOpen}
-        autoHideDuration={6000}
-        onClose={closeSnackbar}
-        message={snackbarText}
-      />
       <Typography component="h1" variant="h4" sx={{ width: '100%' }}>
         Sign up
       </Typography>

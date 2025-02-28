@@ -2,24 +2,26 @@ import { TaskList, TaskListAccessLevel, taskListSchema, taskSchema } from '@todo
 import database from '../database';
 import { sql } from 'slonik';
 import { v4 as uuidv4 } from 'uuid';
+import { delegateUserTaskListAccess } from './taskListAccessModel';
 
 export const getTaskLists = async (
   userId: string,
+  delegatedTaskLists: string[],
   onlyPersonal: boolean
 ): Promise<readonly TaskList[]> => {
   const connection = await database();
+  console.log(userId, delegatedTaskLists, onlyPersonal);
 
   return connection.any(
     sql.type(
       taskListSchema
     )`SELECT tl.id, tl.status, tl.name, tl.description, tl.created_at, tl.updated_at, tl.created_by 
     FROM task_lists tl
-    LEFT JOIN task_list_access tla ON tla.delegated_to = ${userId} AND tla.task_list_id = tl.id 
-    WHERE tla.id IS NOT NULL AND tl.created_by = ${onlyPersonal ? userId : sql.identifier`created_by`}`
+    WHERE tl.id IN (${sql.join(delegatedTaskLists, sql.fragment`,`)}) AND tl.created_by = ${onlyPersonal ? userId : sql.identifier`created_by`}`
   );
 };
 
-export const getTaskListById = async (id: string, userId: string): Promise<TaskList | null> => {
+export const getTaskListById = async (id: string): Promise<TaskList | null> => {
   const connection = await database();
 
   return connection.maybeOne(
@@ -27,8 +29,7 @@ export const getTaskListById = async (id: string, userId: string): Promise<TaskL
       taskSchema
     )`SELECT tl.id, tl.status, tl.name, tl.description, tl.created_at, tl.updated_at, tl.created_by 
     FROM task_lists tl 
-    LEFT JOIN task_list_access tla ON tla.delegated_to = ${userId} AND tla.task_list_id = tl.id 
-    WHERE tl.id = ${id} AND tla.id IS NOT NULL`
+    WHERE tl.id = ${id}`
   );
 };
 
@@ -47,12 +48,7 @@ export const createTaskList = async (
     );
 
     // delegate the task list to the user with admin level
-    await tx.query(
-      sql.unsafe`INSERT INTO task_list_access (task_list_id, delegated_to, delegated_by, level) SELECT * FROM ${sql.unnest(
-        [[id, userId, userId, TaskListAccessLevel.admin]],
-        ['uuid', 'uuid', 'uuid', 'int4']
-      )}`
-    );
+    await delegateUserTaskListAccess(id, TaskListAccessLevel.admin, userId, userId, tx);
   });
 
   return id;
@@ -67,4 +63,10 @@ export const updateTaskList = async (
   await connection.query(
     sql.unsafe`UPDATE task_lists SET name = ${payload.name}, description = ${payload.description ?? ''}, status = ${payload.status} WHERE id = ${id}`
   );
+};
+
+export const deleteTaskList = async (id: string): Promise<void> => {
+  const connection = await database();
+
+  await connection.query(sql.unsafe`DELETE FROM task_lists WHERE id = ${id}`);
 };

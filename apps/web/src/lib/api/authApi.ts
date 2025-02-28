@@ -16,6 +16,20 @@ export const login = async (email: string, password: string) => {
   }
 };
 
+export const logout = async () => {
+  try {
+    const response = await axiosInstance.post<{ success: boolean }>(`/v1/auth/logout`, {});
+    const { success } = response.data;
+    if (success) {
+      axiosInstance.defaults.headers.common['Authorization'] = '';
+    }
+    return response.data;
+  } catch (error: any) {
+    console.error(`error logging out: ${error?.response?.data || error?.message}`);
+    throw error;
+  }
+};
+
 export const signup = async (email: string, password: string) => {
   try {
     const response = await axiosInstance.post<{ id: string }>(`/v1/auth/register`, {

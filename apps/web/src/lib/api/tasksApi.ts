@@ -1,19 +1,18 @@
-import axios from 'axios';
-import { Task } from '@todoiti/common';
+import { CreateTask, Task } from '@todoiti/common';
 import { axiosInstance } from './axios';
 
-export const getTask = async (id: string) => {
+export const getTask = async (id: string, taskListId: string) => {
   try {
-    return axiosInstance.get<Task>(`/tasks/${id}`);
+    return axiosInstance.get<Task>(`/v1/tasks/${id}/${taskListId}`);
   } catch (error: any) {
     console.error(`error fetching task ${id}: ${error?.response?.data || error?.message}`);
     throw error;
   }
 };
 
-export const getTasks = async () => {
+export const getTasks = async (taskListId: string) => {
   try {
-    const response = await axiosInstance.get<Task[]>(`/tasks`);
+    const response = await axiosInstance.get<Task[]>(`/v1/tasks/${taskListId}`);
     return response.data;
   } catch (error: any) {
     console.error(`error fetching tasks: ${error?.response?.data || error?.message}`);
@@ -21,9 +20,9 @@ export const getTasks = async () => {
   }
 };
 
-export const createTask = async (payload: Pick<Task, 'name' | 'description'>) => {
+export const createTask = async (taskListId: string, payload: CreateTask) => {
   try {
-    const response = await axiosInstance.post<{ id: string }>(`/task`, payload);
+    const response = await axiosInstance.post<{ id: string }>(`/v1/tasks/${taskListId}`, payload);
     return response.data;
   } catch (error: any) {
     console.error(`error fetching tasks: ${error?.response?.data || error?.message}`);
@@ -31,9 +30,15 @@ export const createTask = async (payload: Pick<Task, 'name' | 'description'>) =>
   }
 };
 
-export const updateTask = async (payload: Pick<Task, 'name' | 'description' | 'status'>) => {
+export const updateTask = async (
+  taskListId: string,
+  payload: Pick<Task, 'name' | 'description' | 'status'>
+) => {
   try {
-    const response = await axiosInstance.patch<{ success: true }>(`/task`, payload);
+    const response = await axiosInstance.patch<{ success: true }>(
+      `/v1/tasks/${taskListId}`,
+      payload
+    );
     return response.data;
   } catch (error: any) {
     console.error(`error fetching tasks: ${error?.response?.data || error?.message}`);

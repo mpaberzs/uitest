@@ -8,7 +8,7 @@ import passport from 'passport';
 import { getConfig } from './lib/config';
 import CookieParser from 'cookie-parser';
 import morgan from 'morgan';
-import './lib/passport-jwt-strategy';
+import './lib/passportJwtStrategy';
 
 const morganLogger = morgan('combined', {
   skip: function (req: any) {

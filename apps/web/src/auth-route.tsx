@@ -1,18 +1,19 @@
 import { useContext, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router';
-import { UserContext } from './lib/user-context';
 import { Card, colors, Stack, styled } from '@mui/material';
 import { HttpStatusCode } from 'axios';
 import { whoami } from './lib/api/authApi';
+import { NotificationsProvider } from '@toolpad/core/useNotifications';
+import { UserContext } from './app';
 
-const AuthContainer = styled(Stack)(({ theme }) => ({
+const AuthRouteContainer = styled(Stack)(({ theme }) => ({
   height: 'calc((1 - var(--template-frame-height, 0)) * 100dvh)',
   margin: 0,
   minHeight: '100%',
   backgroundColor: colors.orange['300'],
 }));
 
-const AuthCard = styled(Card)(({ theme }) => ({
+const AuthRouteCard = styled(Card)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignSelf: 'center',
@@ -57,11 +58,13 @@ const AuthRoute = () => {
   }, []);
 
   return (
-    <AuthContainer>
-      <AuthCard>
-        <Outlet />
-      </AuthCard>
-    </AuthContainer>
+    <NotificationsProvider>
+      <AuthRouteContainer>
+        <AuthRouteCard>
+          <Outlet />
+        </AuthRouteCard>
+      </AuthRouteContainer>
+    </NotificationsProvider>
   );
 };
 
