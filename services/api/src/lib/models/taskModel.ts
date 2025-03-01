@@ -9,7 +9,7 @@ export const getTaskListTasks = async (taskListId: string): Promise<readonly Tas
   return connection.any(
     sql.type(
       taskSchema
-    )`SELECT id, status, name, description, created_at, updated_at, created_by FROM tasks WHERE task_List_id = ${taskListId}`
+    )`SELECT id, status, name, description, created_at, updated_at, created_by FROM tasks WHERE task_List_id = ${taskListId} ORDER BY created_at ASC`
   );
 };
 

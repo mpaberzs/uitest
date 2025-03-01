@@ -4,11 +4,13 @@ import {
   deleteTaskList,
   getTaskListById,
   getTaskLists,
+  setTaskListDone as setTaskListStatus,
   updateTaskList,
 } from './lib/models/taskListModel';
 import {
   createTaskListSchema,
   TaskListAccessLevel,
+  taskStatusSchema,
   updateTaskListSchema,
 } from '@todoiti/common';
 import z from 'zod';
@@ -80,6 +82,31 @@ router.post('', async (req, res) => {
     }
   }
 });
+
+router.post(
+  '/:taskListId/:taskListStatus',
+  taskListAccessMiddleware(TaskListAccessLevel.write),
+  async (req, res) => {
+    try {
+      const params = z
+        .object({
+          taskListId: z.string().uuid(),
+          taskListStatus: taskStatusSchema
+        })
+        .parse(req.params);
+
+      await setTaskListStatus(params.taskListId, params.taskListStatus);
+      res.json({ success: true });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('Validation failed: ', error.issues[0]);
+        res.status(400).json(error.issues[0]);
+      } else {
+        res.status(500).json({ message: 'Something went wrong' });
+      }
+    }
+  }
+);
 
 router.patch(
   '/:taskListId',

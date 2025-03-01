@@ -1,4 +1,4 @@
-import { CreateTaskList, TaskList } from '@todoiti/common';
+import { CreateTaskList, TaskList, TaskListAccess } from '@todoiti/common';
 import { axiosInstance } from './axios';
 
 export const getTaskList = async (taskListId: string) => {
@@ -43,6 +43,16 @@ export const updateTaskList = async (
     return response.data;
   } catch (error: any) {
     console.error(`error fetching task list: ${error?.response?.data || error?.message}`);
+    throw error;
+  }
+};
+
+export const setTaskListStatus = async (taskListId: string, status: TaskList['status']) => {
+  try {
+    const response = await axiosInstance.post<{ success: boolean }>(`/v1/task-lists/${taskListId}/${status}`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`error setting task list done: ${error?.response?.data || error?.message}`);
     throw error;
   }
 };

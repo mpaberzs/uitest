@@ -76,7 +76,7 @@ const CreateTaskDialog: DialogComponent<any, any> = ({
   const { taskListName } = payload;
   return (
     <Dialog fullWidth open={open} onClose={() => onClose({ created: false })}>
-      <DialogTitle>Create new task in {taskListName}</DialogTitle>
+      <DialogTitle>Create new subtask in "{taskListName}"</DialogTitle>
       <DialogContent>
         <Box
           component="form"
@@ -123,7 +123,7 @@ const CreateTaskDialog: DialogComponent<any, any> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button color="primary" onClick={handleSubmit}>
+        <Button color="primary" variant="contained" onClick={handleSubmit}>
           Save
         </Button>
         <Button color="error" onClick={() => onClose({ created: false })}>

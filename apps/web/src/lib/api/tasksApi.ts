@@ -31,17 +31,30 @@ export const createTask = async (taskListId: string, payload: CreateTask) => {
 };
 
 export const updateTask = async (
+  taskId: string,
   taskListId: string,
   payload: Pick<Task, 'name' | 'description' | 'status'>
 ) => {
   try {
     const response = await axiosInstance.patch<{ success: true }>(
-      `/v1/tasks/${taskListId}`,
+      `/v1/tasks/${taskListId}/${taskId}`,
       payload
     );
     return response.data;
   } catch (error: any) {
     console.error(`error fetching tasks: ${error?.response?.data || error?.message}`);
+    throw error;
+  }
+};
+
+export const deleteTask = async (taskId: string, taskListId: string) => {
+  try {
+    const response = await axiosInstance.delete<{ success: true }>(
+      `/v1/tasks/${taskListId}/${taskId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error(`error deleting task: ${error?.response?.data || error?.message}`);
     throw error;
   }
 };

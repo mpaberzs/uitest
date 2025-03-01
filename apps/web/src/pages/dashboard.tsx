@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { createTaskList, getTaskLists } from 'src/lib/api/taskListsApi';
-import { TaskList, taskStatusSchema } from '@todoiti/common';
+import { TaskList } from '@todoiti/common';
 import z from 'zod';
 import { useNotifications } from '@toolpad/core/useNotifications';
 
@@ -53,7 +53,7 @@ const Dashboard = () => {
       setTaskLists(lists);
     } catch (error: any) {
       notifications.show(
-        `Error refreshing TODO lists: ${error?.response?.data?.message || error?.message}`,
+        `Error refreshing tasks: ${error?.response?.data?.message || error?.message}`,
         {
           severity: 'error',
           autoHideDuration: 10_000,
@@ -84,7 +84,7 @@ const Dashboard = () => {
 
       try {
         await createTaskList({ name: nameForm, description: taskListDescription, status: 'active' });
-        notifications.show(`TODO list "${nameForm}" created successfully`, {
+        notifications.show(`Task "${nameForm}" created successfully`, {
           severity: 'success',
           autoHideDuration: 10_000,
         });
@@ -94,7 +94,7 @@ const Dashboard = () => {
         refreshTaskLists();
       } catch (error: any) {
         notifications.show(
-          `Error creating TODO list "${nameForm}": ${error?.response?.data?.message || error?.message}`,
+          `Error creating task "${nameForm}": ${error?.response?.data?.message || error?.message}`,
           {
             severity: 'error',
             autoHideDuration: 10_000,
@@ -115,7 +115,7 @@ const Dashboard = () => {
 
   const handleOpenTaskList = React.useCallback(
     (taskListId: string) => () => {
-      navigate(`todos/${taskListId}`);
+      navigate(`tasks/${taskListId}`);
     },
     [navigate]
   );
@@ -133,7 +133,7 @@ const Dashboard = () => {
         }
         if (isMounted) {
           notifications.show(
-            `Error fetching TODO lists: ${error?.response?.data?.message || error?.message}`,
+            `Error fetching tasks: ${error?.response?.data?.message || error?.message}`,
             {
               severity: 'error',
               autoHideDuration: 10_000,
@@ -153,7 +153,7 @@ const Dashboard = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box>
         <Typography component="h1" variant="h1" align="center" gutterBottom>
-          Your TODO lists
+          Your tasks
         </Typography>
       </Box>
       <Grid container spacing={2}>
@@ -164,7 +164,7 @@ const Dashboard = () => {
         ) : taskLists.length === 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
             <Typography component="h2" variant="h2">
-              You have no TODO lists yet!
+              You have no tasks yet!
             </Typography>
           </Box>
         ) : (
@@ -208,7 +208,7 @@ const Dashboard = () => {
                 id="name"
                 type="text"
                 name="name"
-                placeholder="TODO list name"
+                placeholder="Task name"
                 fullWidth
                 color={nameError ? 'error' : 'primary'}
                 onChange={(event) => setTaskListName(event.target.value)}
@@ -219,7 +219,7 @@ const Dashboard = () => {
               <FormLabel htmlFor="description">Description</FormLabel>
               <TextareaAutosize
                 name="description"
-                placeholder="TODO list description"
+                placeholder="Task description"
                 id="description"
                 color="primary"
                 onChange={(event) => setTaskListDescription(event.target.value)}
