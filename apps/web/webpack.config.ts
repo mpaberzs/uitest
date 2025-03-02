@@ -1,5 +1,6 @@
 import path from 'path';
 import webpack from 'webpack';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
 import { TsconfigPathsPlugin } from 'tsconfig-paths-webpack-plugin';
@@ -36,6 +37,7 @@ const webpackConfig = (env: any) => ({
     new HtmlWebpackPlugin({
       template: './public/index.html',
     }),
+    new CopyWebpackPlugin({ patterns: [{ from: 'public/config.json', to: 'config.json' }] }),
     new webpack.DefinePlugin({
       'process.env.PRODUCTION': env.production || !env.development,
       // "process.env.NAME": JSON.stringify(require("./package.json").name),

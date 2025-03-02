@@ -3,26 +3,39 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import MuiCard from '@mui/material/Card';
 import CreateIcon from '@mui/icons-material/Create';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {
   Button,
+  CardActions,
+  CardContent,
+  Checkbox,
   CircularProgress,
+  colors,
   FormControl,
+  FormControlLabel,
   FormLabel,
   Grid2 as Grid,
+  IconButton,
   styled,
   TextareaAutosize,
   TextField,
 } from '@mui/material';
 import { useNavigate } from 'react-router';
-import { createTaskList, getTaskLists } from 'src/lib/api/taskListsApi';
-import { TaskList } from '@todoiti/common';
+import {
+  createTaskList,
+  deleteTaskList,
+  getTaskLists,
+  setTaskListStatus,
+} from 'src/lib/api/taskListsApi';
+import { Task, TaskList } from '@todoiti/common';
 import z from 'zod';
 import { useNotifications } from '@toolpad/core/useNotifications';
+import { useDialogs } from '@toolpad/core/useDialogs';
 
 const TaskListCard = styled(MuiCard)(({ theme }) => ({
-  '&:hover': {
-    cursor: 'pointer',
-  },
+  display: 'flex',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
 }));
 
 const FormCard = styled(MuiCard)(({ theme }) => ({
@@ -83,7 +96,11 @@ const Dashboard = () => {
       }
 
       try {
-        await createTaskList({ name: nameForm, description: taskListDescription, status: 'active' });
+        await createTaskList({
+          name: nameForm,
+          description: taskListDescription,
+          status: 'active',
+        });
         notifications.show(`Task "${nameForm}" created successfully`, {
           severity: 'success',
           autoHideDuration: 10_000,
@@ -118,6 +135,83 @@ const Dashboard = () => {
       navigate(`tasks/${taskListId}`);
     },
     [navigate]
+  );
+
+  const dialogs = useDialogs();
+
+  const handleDeleteTaskList = React.useCallback(
+    (taskListId: string) => async () => {
+      const taskList = taskLists.find((l) => l.id === taskListId);
+      if (!taskList) {
+        // safeguard (edge case)
+        return;
+      }
+      const confirmResult = await dialogs.confirm(
+        `Are you sure you want to delete task "${taskList.name}" and all it's subtasks?`,
+        {
+          okText: 'Yes',
+          cancelText: 'No',
+        }
+      );
+      if (!confirmResult) {
+        return;
+      }
+      try {
+        await deleteTaskList(taskList.id);
+        notifications.show(`Removed task "${taskList.name}" successfully!`, {
+          severity: 'success',
+          autoHideDuration: 10_000,
+        });
+
+        await refreshTaskLists();
+      } catch (error: any) {
+        notifications.show(
+          `Error deleting task "${taskList.name}": ${error?.response?.data?.message || error?.message}`,
+          {
+            severity: 'error',
+            autoHideDuration: 10_000,
+          }
+        );
+      }
+    },
+    [deleteTaskList, dialogs, notifications, taskLists]
+  );
+
+  const handleToggleTaskListDone = React.useCallback(
+    (taskListId: string) => async () => {
+      const taskList = taskLists.find((l) => l.id === taskListId);
+      if (!taskList) {
+        // safeguard (edge case)
+        return;
+      }
+
+      const newTaskListStatus: Task['status'] = taskList.status === 'done' ? 'active' : 'done';
+      const confirmResult = await dialogs.confirm(
+        `Are you sure you want to mark "${taskList.name}" and all it's subtasks as "${newTaskListStatus}"?`,
+        {
+          okText: 'Yes',
+          cancelText: 'No',
+        }
+      );
+      if (!confirmResult) {
+        return;
+      }
+
+      try {
+        await setTaskListStatus(taskList.id, newTaskListStatus);
+        await refreshTaskLists();
+      } catch (error: any) {
+        let msg = 'Something went wrong while updating task';
+        if (error?.response?.status === 403) {
+          msg = 'Your access to this task is suspended';
+        } else if (error?.response?.status === 404) {
+          msg = 'Task not found';
+        }
+        notifications.show(msg, { severity: 'error', autoHideDuration: 10_000 });
+      } finally {
+      }
+    },
+    [setTaskListStatus, refreshTaskLists, dialogs, notifications, taskLists]
   );
 
   React.useEffect(() => {
@@ -169,20 +263,49 @@ const Dashboard = () => {
           </Box>
         ) : (
           taskLists.map((taskList) => (
-            <Grid
-              size={taskLists.length >= 3 ? 4 : 12 / taskLists.length}
-              onClick={handleOpenTaskList(taskList.id)}
-            >
-              <TaskListCard variant="outlined" style={{ padding: '10px' }}>
-                <Typography component="h4" variant="h4">
-                  {taskList.name}
-                </Typography>
-                {taskList.description ? (
-                  <Typography component="p">{taskList.description}</Typography>
-                ) : null}
-                <Typography component="p" color="textSecondary">
-                  {taskList.tasks?.length ?? 0} tasks
-                </Typography>
+            <Grid size={12}>
+              <TaskListCard variant="outlined" sx={{ padding: '10px' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'row' }}>
+                  <CardActions>
+                    <FormControlLabel
+                      label=""
+                      control={
+                        <Checkbox
+                          size="large"
+                          checked={taskList.status === 'done'}
+                          onChange={handleToggleTaskListDone(taskList.id)}
+                        />
+                      }
+                    />
+                  </CardActions>
+                  <CardContent sx={{ '&:hover': { cursor: 'pointer' } }}>
+                    <Box onClick={handleOpenTaskList(taskList.id)}>
+                      <Typography
+                        component="h4"
+                        variant="h4"
+                        sx={{
+                          textDecoration: taskList.status === 'done' ? 'line-through' : 'none',
+                        }}
+                      >
+                        {taskList.name}
+                      </Typography>
+                      <Typography
+                        component="p"
+                        color="textSecondary"
+                        sx={{
+                          textDecoration: taskList.status === 'done' ? 'line-through' : 'none',
+                        }}
+                      >
+                        {taskList.tasks?.length ?? 0} subtasks
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Box>
+                <CardActions>
+                  <IconButton onClick={handleDeleteTaskList(taskList.id)} color="error">
+                    <DeleteIcon />
+                  </IconButton>
+                </CardActions>
               </TaskListCard>
             </Grid>
           ))

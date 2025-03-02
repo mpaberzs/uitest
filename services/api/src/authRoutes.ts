@@ -28,7 +28,7 @@ router.post('/logout', passport.authenticate('jwt', { session: false }), async (
     res.clearCookie(getConfig().jwtRefreshCookieName, {
       httpOnly: true,
       maxAge: 5_000, // 5s
-      // domain: getConfig().webAppHost
+      domain: getConfig().webAppHost
     });
     res.status(200).json({
       message: 'logout successful',
@@ -84,7 +84,7 @@ router.post('/login', async (req, res, next) => {
     res.cookie(getConfig().jwtRefreshCookieName, refreshToken, {
       httpOnly: true,
       maxAge: getConfig().jwtRefreshTTL * 1000,
-      // domain: getConfig().webAppHost
+      domain: getConfig().webAppHost
     });
     res.status(200).json({ message: 'login successful', user: { id: user.id }, accessToken });
   } catch (error: any) {
@@ -110,8 +110,6 @@ router.get('/refresh', async (req, res, next) => {
       return;
     }
     const verified = jwt.verify(cookie, getConfig().jwtRefreshSecret) as JwtPayload;
-    console.log('ver', verified);
-    console.log('decoe', jwt.decode(cookie));
 
     const tokenFromDatabase = await getUserToken(verified.jti!);
     if (tokenFromDatabase.valid) {

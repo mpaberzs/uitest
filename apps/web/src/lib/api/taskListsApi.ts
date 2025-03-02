@@ -1,4 +1,4 @@
-import { CreateTaskList, TaskList, TaskListAccess } from '@todoiti/common';
+import { CreateTaskList, TaskList } from '@todoiti/common';
 import { axiosInstance } from './axios';
 
 export const getTaskList = async (taskListId: string) => {
@@ -47,9 +47,17 @@ export const updateTaskList = async (
   }
 };
 
-export const setTaskListStatus = async (taskListId: string, status: TaskList['status']) => {
+export const setTaskListStatus = async (
+  taskListId: string,
+  status: TaskList['status'],
+  updateRelatedTasks = true
+) => {
   try {
-    const response = await axiosInstance.post<{ success: boolean }>(`/v1/task-lists/${taskListId}/${status}`);
+    const response = await axiosInstance.patch<{ success: boolean }>(
+      `/v1/task-lists/${taskListId}/${status}`,
+      {},
+      { params: { updateRelatedTasks } }
+    );
     return response.data;
   } catch (error: any) {
     console.error(`error setting task list done: ${error?.response?.data || error?.message}`);
@@ -59,7 +67,9 @@ export const setTaskListStatus = async (taskListId: string, status: TaskList['st
 
 export const deleteTaskList = async (taskListId: string) => {
   try {
-    const response = await axiosInstance.delete<{ success: boolean }>(`/v1/task-lists/${taskListId}`);
+    const response = await axiosInstance.delete<{ success: boolean }>(
+      `/v1/task-lists/${taskListId}`
+    );
     return response.data;
   } catch (error: any) {
     console.error(`error deleting task list: ${error?.response?.data || error?.message}`);

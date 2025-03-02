@@ -17,14 +17,14 @@ const checkTaskListAccessMiddleware =
       const result = await getUserTaskListAccess((req.user as any).id, req.params.taskListId);
       if (!result) {
         // we cannot let user poke around any unrealted taskList id there is and check if it exists so we say it doesn't exist without checking
-        res.status(404).json({ message: 'Task list not found' });
+        res.status(404).json({ message: 'Task not found' });
         return;
       }
       if (result.level === TaskListAccessLevel.suspended || result.expired) {
-        res.status(403).json({ message: 'Your access to the task list has been suspended' });
+        res.status(403).json({ message: 'Your access to the task has been suspended' });
         return;
       } else if (result.level < targetLevel) {
-        res.status(403).json({ message: 'No sufficient access to task list' });
+        res.status(403).json({ message: 'No sufficient access to the task' });
         return;
       }
     } else {

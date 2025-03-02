@@ -6,24 +6,21 @@ import FormLabel from '@mui/material/FormLabel';
 import FormControl from '@mui/material/FormControl';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { colors, Snackbar } from '@mui/material';
 import z from 'zod';
 import { login } from 'src/lib/api/authApi';
-import { NavLink, useNavigate } from 'react-router';
+import { Location, NavLink, useLocation, useNavigate } from 'react-router';
 import { axiosInstance } from 'src/lib/api/axios';
+import { useNotifications } from '@toolpad/core/useNotifications';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location: Location<{ isInviteProcess?: boolean; nextUrl?: string }> = useLocation();
+  const notifications = useNotifications();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
   const [emailError, setEmailError] = React.useState('');
   const [passwordError, setPasswordError] = React.useState('');
-
-  const [isSnackbarOpen, setIsSnackbarOpen] = React.useState(false);
-  const [snackbarText, setSnackbarText] = React.useState(false);
-
-  const closeSnackbar = React.useCallback(() => setIsSnackbarOpen(false), []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -55,23 +52,29 @@ const Login = () => {
     login(email, password)
       .then(({ accessToken }) => {
         axiosInstance.defaults.headers['Authorization'] = `Bearer ${accessToken}`;
-        navigate('/', { replace: true });
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+
+        navigate(location.state?.nextUrl ?? '/', { replace: true });
       })
       .catch((error: any) => {
-        setSnackbarText(error?.response?.data?.message || error?.message);
-        setIsSnackbarOpen(true);
+        notifications.show(error?.response?.data?.message || error?.message, {
+          severity: 'error',
+          autoHideDuration: 15_000,
+        });
       });
   };
 
+  const loginInfoMessage = location.state?.isInviteProcess
+    ? 'Log in to accept collaboration invite'
+    : '';
+
   return (
     <>
-      <Snackbar
-        open={isSnackbarOpen}
-        autoHideDuration={6000}
-        onClose={closeSnackbar}
-        message={snackbarText}
-        color={colors.red['600']}
-      />
+      {loginInfoMessage ? (
+        <Typography component="p" sx={{ width: '100%' }}>
+          {loginInfoMessage}
+        </Typography>
+      ) : null}
       <Typography component="h1" variant="h4" sx={{ width: '100%' }}>
         Sign in
       </Typography>
@@ -131,7 +134,7 @@ const Login = () => {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Typography sx={{ textAlign: 'center' }}>
           Don't have an account?{' '}
-          <NavLink to="/signup" replace>
+          <NavLink to="/signup" state={location.state} replace>
             Sign up
           </NavLink>
         </Typography>

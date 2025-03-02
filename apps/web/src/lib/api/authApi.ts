@@ -11,7 +11,7 @@ export const login = async (email: string, password: string) => {
     );
     return response.data;
   } catch (error: any) {
-    console.error(`error logging in: ${error?.response?.data || error?.message}`);
+    console.error(`error logging in: `, error?.response?.data || error?.message);
     throw error;
   }
 };
@@ -25,7 +25,7 @@ export const logout = async () => {
     }
     return response.data;
   } catch (error: any) {
-    console.error(`error logging out: ${error?.response?.data || error?.message}`);
+    console.error(`error logging out: `, error?.response?.data || error?.message);
     throw error;
   }
 };
@@ -38,7 +38,7 @@ export const signup = async (email: string, password: string) => {
     });
     return response.data;
   } catch (error: any) {
-    console.error(`error logging in: ${error?.response?.data || error?.message}`);
+    console.error(`error signing up: `, error?.response?.data || error?.message);
     throw error;
   }
 };
@@ -53,7 +53,7 @@ export const whoami = async () => {
     }>('/v1/users/whoami');
     return response.data;
   } catch (error: any) {
-    console.error(`error logging in: ${error?.response?.data || error?.message}`);
+    console.error(`error in whoami request: `, error?.response?.data || error?.message);
     throw error;
   }
 };

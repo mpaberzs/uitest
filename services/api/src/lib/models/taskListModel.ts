@@ -10,7 +10,6 @@ export const getTaskLists = async (
   onlyPersonal: boolean
 ): Promise<readonly TaskList[]> => {
   const connection = await database();
-  console.log(userId, delegatedTaskLists, onlyPersonal);
 
   return connection.any(
     sql.type(
@@ -18,7 +17,7 @@ export const getTaskLists = async (
     )`SELECT tl.id, tl.status, tl.name, tl.description, tl.created_at, tl.updated_at, tl.created_by 
     FROM task_lists tl
     WHERE tl.id IN (${sql.join(delegatedTaskLists, sql.fragment`,`)}) AND tl.created_by = ${onlyPersonal ? userId : sql.identifier`created_by`}
-   ORDER BY tl.created_at ASC`
+    ORDER BY tl.created_at DESC`
   );
 };
 
@@ -55,13 +54,19 @@ export const createTaskList = async (
   return id;
 };
 
-export const setTaskListDone = async (id: string, status: TaskList['status']): Promise<void> => {
+export const setTaskListDone = async (
+  id: string,
+  status: TaskList['status'],
+  updateRelatedTasks: boolean
+): Promise<void> => {
   const connection = await database();
 
   await connection.transaction(async (tx) => {
     await tx.query(sql.unsafe`UPDATE task_lists SET status = ${status} WHERE id = ${id}`);
 
-    await tx.query(sql.unsafe`UPDATE tasks SET status = ${status} WHERE task_list_id = ${id}`);
+    if (updateRelatedTasks) {
+      await tx.query(sql.unsafe`UPDATE tasks SET status = ${status} WHERE task_list_id = ${id}`);
+    }
   });
 };
 

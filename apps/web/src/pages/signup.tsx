@@ -8,11 +8,12 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import z from 'zod';
 import { signup } from 'src/lib/api/authApi';
-import { NavLink, useNavigate } from 'react-router';
+import { Location, NavLink, useLocation, useNavigate } from 'react-router';
 import { useNotifications } from '@toolpad/core/useNotifications';
 
 const Signup = () => {
   const notifications = useNotifications();
+  const location: Location<{ isInviteProcess?: boolean; nextUrl?: string }> = useLocation();
   const navigate = useNavigate();
 
   const [email, setEmail] = React.useState('');
@@ -55,13 +56,13 @@ const Signup = () => {
       .then(() => {
         setPassword('');
         setEmail('');
-        navigate('/login', { replace: true });
+        navigate('/login', { replace: true, state: location.state });
       })
       .catch((err) => {
         notifications.show(err?.response?.data?.message || err?.message, {
           severity: 'error',
           autoHideDuration: 10_000,
-        })
+        });
       });
   };
 
@@ -125,7 +126,7 @@ const Signup = () => {
       <Divider>or</Divider>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Typography sx={{ textAlign: 'center' }}>
-          Already have an account? <NavLink to="login">Log in</NavLink>
+          Already have an account? <NavLink to="/login" state={location.state}>Log in</NavLink>
         </Typography>
       </Box>
     </>

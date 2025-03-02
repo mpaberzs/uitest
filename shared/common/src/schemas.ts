@@ -1,6 +1,13 @@
 import z from 'zod';
+import { TaskListAccessLevel } from './constants';
 
 export const taskStatusSchema = z.enum(['active', 'done', 'hidden']);
+export const taskListAccessLevelSchema = z
+  .number()
+  .int()
+  .min(TaskListAccessLevel.suspended)
+  .max(TaskListAccessLevel.admin); // 0: suspended; 1: read, 2: write, 3: admin
+
 export const taskListAccessSchema = z.object({
   id: z.number(),
   task_list_id: z.string(),
@@ -9,7 +16,24 @@ export const taskListAccessSchema = z.object({
   created_at: z.number(),
   updated_at: z.number(),
   expires_at: z.number().optional(),
-  level: z.number().int().min(0).max(3), // 0: suspended; 1: read, 2: write, 3: admin
+  level: taskListAccessLevelSchema,
+});
+
+export const createInviteSchema = z.object({
+  access_level: taskListAccessLevelSchema.optional(),
+  expires_at: z.number().int().positive().optional(),
+});
+
+export const inviteSchema = createInviteSchema.extend({
+  task_list_id: z.string().uuid(),
+  id: z.string().uuid(),
+  expires_at: z.number().int().positive(),
+  // FIXME: PoF: can be later improved
+  hash: z.string().uuid(),
+  accepted: z.boolean(),
+  inviter_id: z.string().uuid(),
+  link: z.string(),
+  accepter_id: z.string().uuid().optional(),
 });
 
 export const createTaskSchema = z.object({

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import MuiCard from '@mui/material/Card';
 import { styled } from '@mui/material/styles';
 import { useNavigate, useParams } from 'react-router';
 import {
@@ -21,6 +20,7 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
+  OutlinedInput,
   Stack,
 } from '@mui/material';
 import { useNotifications } from '@toolpad/core/useNotifications';
@@ -28,15 +28,24 @@ import { useDialogs } from '@toolpad/core/useDialogs';
 import CreateIcon from '@mui/icons-material/Create';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import FileCopyIcon from '@mui/icons-material/FileCopy';
 import CreateTaskDialog from 'src/components/create-task-dialog';
 import { deleteTask, updateTask } from 'src/lib/api/tasksApi';
+import { createInvite } from 'src/lib/api/invitesApi';
+import { axiosInstance } from 'src/lib/api/axios';
+import { UserContext } from 'src/app';
 
-const TaskListCard = styled(MuiCard)(({ theme }) => ({}));
+const TaskListActionsBoxWrapper = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  padding: '20px 0',
+}));
+
 const TaskListActionsBox = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'row',
   justifyContent: 'start',
-  padding: '20px 0',
 }));
 
 const TaskListHeaderBox = styled(Box)(({ theme }) => ({
@@ -45,6 +54,7 @@ const TaskListHeaderBox = styled(Box)(({ theme }) => ({
 
 const TaskList = () => {
   const notifications = useNotifications();
+  const context = React.useContext(UserContext);
   const dialogs = useDialogs();
   const params = useParams();
   const navigate = useNavigate();
@@ -95,7 +105,7 @@ const TaskList = () => {
         } else if (error?.response?.status === 404) {
           msg = 'task not found';
         }
-        notifications.show(msg, { severity: 'error' });
+        notifications.show(msg, { severity: 'error', autoHideDuration: 10_000 });
       } finally {
       }
     },
@@ -132,6 +142,10 @@ const TaskList = () => {
     >(CreateTaskDialog, { taskListName: taskList.name, taskListId: taskList.id });
 
     if (result.created) {
+      // if the task list was done but we are setting task as active then change also task list status
+      if (taskList!.status === 'done') {
+        await setTaskListStatus(taskList!.id, 'active', false);
+      }
       await refreshTaskList();
     }
   }, [deleteTaskList, dialogs, notifications, taskList]);
@@ -142,7 +156,7 @@ const TaskList = () => {
       return;
     }
 
-    const newTaskListStatus: TaskList['status'] = taskList.status === 'done' ? 'active' : 'done';
+    const newTaskListStatus: Task['status'] = taskList.status === 'done' ? 'active' : 'done';
     const confirmResult = await dialogs.confirm(
       `Are you sure you want to mark "${taskList.name}" and all it's subtasks as "${newTaskListStatus}"?`,
       {
@@ -164,7 +178,7 @@ const TaskList = () => {
       } else if (error?.response?.status === 404) {
         msg = 'Task not found';
       }
-      notifications.show(msg, { severity: 'error' });
+      notifications.show(msg, { severity: 'error', autoHideDuration: 10_000 });
     } finally {
     }
   }, [setTaskListStatus, refreshTaskList, dialogs, notifications, taskList]);
@@ -178,11 +192,23 @@ const TaskList = () => {
       }
 
       try {
+        const newStatus = task.status === 'done' ? 'active' : 'done';
         await updateTask(taskId, taskList!.id, {
           name: task.name,
           description: task.description,
-          status: task.status === 'done' ? 'active' : 'done',
+          status: newStatus,
         });
+        // if the task list was done but we are setting task as active then change also task list status
+        if (newStatus === 'active' && taskList!.status === 'done') {
+          await setTaskListStatus(taskList!.id, 'active', false);
+        }
+
+        if (
+          newStatus === 'done' &&
+          !taskList!.tasks?.filter((t) => t.id !== task.id).some((task) => task.status !== 'done')
+        ) {
+          await setTaskListStatus(taskList!.id, 'done', false);
+        }
         await refreshTaskList();
       } catch (error: any) {
         let msg = 'Something went wrong while updating task';
@@ -191,7 +217,7 @@ const TaskList = () => {
         } else if (error?.response?.status === 404) {
           msg = 'task not found';
         }
-        notifications.show(msg, { severity: 'error' });
+        notifications.show(msg, { severity: 'error', autoHideDuration: 10_000 });
       } finally {
       }
     },
@@ -204,7 +230,7 @@ const TaskList = () => {
       return;
     }
     const confirmResult = await dialogs.confirm(
-      `Are you sure you want to delete task "${taskList.name}" ?`,
+      `Are you sure you want to delete task "${taskList.name}" and all it's subtasks?`,
       {
         okText: 'Yes',
         cancelText: 'No',
@@ -235,13 +261,79 @@ const TaskList = () => {
     navigate('/', { replace: true });
   }, [navigate]);
 
+  const [inviteLink, setInviteLink] = React.useState<string>();
+  const handleCopyInviteLink = React.useCallback(() => {
+    navigator.clipboard.writeText(inviteLink!);
+    notifications.show('Invite link copied to clipboard!');
+  }, [setInviteLink, inviteLink]);
+
+  const handleGenerateInvite = React.useCallback(async () => {
+    if (!taskList) {
+      // safeguard
+      return;
+    }
+    setInviteLink('');
+    try {
+      const invite = await createInvite(taskList.id);
+      setInviteLink(invite.link);
+    } catch (error: any) {
+      notifications.show(
+        `Error generating invite for "${taskList.name}": ${error?.response?.data?.message || error?.message}`,
+        {
+          severity: 'error',
+          autoHideDuration: 15_000,
+        }
+      );
+    }
+  }, [createInvite, setInviteLink, notifications, taskList]);
+
   React.useEffect(() => {
+    let isMounted = true;
+    let wsConnection: WebSocket | null = null;
     if (params.id) {
       getTaskList(params.id)
-        .then((list) => {
-          setTaskList(list);
+        .then((taskList) => {
+          if (!isMounted) {
+            return;
+          }
+          setTaskList(taskList);
+          const url = new URL(`http://localhost:8000/v1/ws/${taskList.id}`);
+          console.log('diggo', axiosInstance.defaults.headers);
+          url.searchParams.set(
+            'accessToken',
+            // FIXME: implement proper auth hooks
+            (axiosInstance.defaults.headers.common['Authorization'] as string)?.split(' ').pop() ??
+              ''
+          );
+
+          const wsConnection = new WebSocket(url);
+
+          wsConnection.addEventListener('message', (event) => {
+            if (isMounted) {
+              try {
+                const websocketPayload = JSON.parse(event.data);
+                if (websocketPayload.status === 'failed') {
+                  notifications.show(`Realtime connection failed: ${websocketPayload.message}`, {
+                    severity: 'warning',
+                  });
+                  wsConnection.close();
+                } else if (websocketPayload.status === 'updated') {
+                  // TODO: not if editing description or title
+                  refreshTaskList();
+                } else if (websocketPayload.status === 'deleted') {
+                  wsConnection.close();
+                  navigate('/', { replace: true });
+                }
+              } catch (error: any) {
+                console.error('Failed to parse WebSocket message:', error?.message, event.data);
+              }
+            }
+          });
         })
         .catch((error) => {
+          if (!isMounted) {
+            return;
+          }
           let msg = 'Something went wrong while getting task';
           if (error?.response?.status === 403) {
             msg = 'Your access to this task is suspended';
@@ -253,11 +345,15 @@ const TaskList = () => {
         .finally(() => {
           setIsLoading(false);
         });
+      return () => {
+        isMounted = false;
+        wsConnection && (wsConnection as any).close();
+      };
     }
   }, [params.id]);
 
   return (
-    <TaskListCard variant="outlined" style={{ padding: '15px' }}>
+    <>
       <Box>
         <Button onClick={handleGoBack} color="secondary" startIcon={<ChevronLeftIcon />}>
           Back
@@ -278,43 +374,59 @@ const TaskList = () => {
                   size="large"
                   checked={taskList.status === 'done'}
                   indeterminate={
-                    (taskList.status === 'active' &&
-                      taskList.tasks?.some((task) => task.status === 'done')) ||
-                    (taskList.status === 'done' &&
-                      !taskList.tasks?.some((task) => task.status === 'done'))
+                    taskList.status === 'active' &&
+                    Boolean(taskList.tasks?.some((task) => task.status === 'done'))
                   }
                   onChange={handleToggleTaskListDone}
                 />
               }
             />
-            <Typography component="h1" variant="h1">
+            <Typography
+              sx={{ textDecoration: taskList.status === 'done' ? 'line-through' : 'none' }}
+              component="h1"
+              variant="h1"
+            >
               {taskList.name}
             </Typography>
           </Box>
           {taskList.description ? (
             <Typography component="p">{taskList.description}</Typography>
           ) : null}
-          <Divider sx={{ margin: '0 20px 0' }} />
-          <TaskListActionsBox>
-            <Button
-              color="primary"
-              variant="contained"
-              onClick={handleInitAddTask}
-              startIcon={<CreateIcon />}
-            >
-              Add new subtask
-            </Button>
+          <Divider sx={{ margin: taskList.description ? '0 0 20px' : '20px 0' }} />
+          <TaskListActionsBoxWrapper>
+            <TaskListActionsBox>
+              <Button
+                color="primary"
+                variant="contained"
+                onClick={handleInitAddTask}
+                startIcon={<CreateIcon />}
+              >
+                Add new subtask
+              </Button>
 
-            <Button
-              color="error"
-              variant="contained"
-              onClick={handleDeleteTaskList}
-              startIcon={<DeleteIcon />}
-              sx={{ marginLeft: '20px' }}
-            >
-              Delete task list
-            </Button>
-          </TaskListActionsBox>
+              <Button
+                color="error"
+                variant="contained"
+                onClick={handleDeleteTaskList}
+                startIcon={<DeleteIcon />}
+                sx={{ marginLeft: '20px' }}
+              >
+                Delete task
+              </Button>
+            </TaskListActionsBox>
+            <TaskListActionsBox>
+              {inviteLink ? (
+                <TaskListActionsBox sx={{ alignItems: 'center' }}>
+                  <OutlinedInput value={inviteLink} type="text" />
+                  <IconButton onClick={handleCopyInviteLink}>
+                    <FileCopyIcon />
+                  </IconButton>
+                </TaskListActionsBox>
+              ) : (
+                <Button onClick={handleGenerateInvite}>Generate collaborator link</Button>
+              )}
+            </TaskListActionsBox>
+          </TaskListActionsBoxWrapper>
           {(taskList.tasks || []).length > 0 ? (
             <>
               <TaskListHeaderBox>
@@ -331,6 +443,7 @@ const TaskList = () => {
                       alignItems: 'flex-start',
                       justifyContent: 'space-between',
                     }}
+                    key={task.id}
                   >
                     <Box
                       sx={{
@@ -351,8 +464,14 @@ const TaskList = () => {
                           }
                         />
                       </CardActions>
-                      <CardContent sx={{}}>
-                        <Typography component="h3" variant="h4">
+                      <CardContent>
+                        <Typography
+                          sx={{
+                            textDecoration: taskList.status === 'done' ? 'line-through' : 'none',
+                          }}
+                          component="h3"
+                          variant="h4"
+                        >
                           {task.name}
                         </Typography>
                         <Typography>{task.description}</Typography>
@@ -393,7 +512,7 @@ const TaskList = () => {
           </Typography>
         </Box>
       )}
-    </TaskListCard>
+    </>
   );
 };
 

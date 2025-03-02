@@ -9,6 +9,7 @@ import {
 import z from 'zod';
 import { createTaskSchema, TaskListAccessLevel, taskStatusSchema } from '@todoiti/common';
 import checkTaskListAccessMiddleware from './lib/taskListAccessMiddleware';
+import { WebsocketService } from './lib/websocketService';
 
 const router = Router();
 
@@ -76,6 +77,7 @@ router.post(
 
       const id = await createTask(body, params.taskListId);
 
+      WebsocketService.publishUpdateToTaskListSubscribers(params.taskListId);
       res.json({ id });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -109,6 +111,7 @@ router.patch(
         .parse(req.body);
 
       await updateTask(params.taskId, body, params.taskListId);
+      WebsocketService.publishUpdateToTaskListSubscribers(params.taskListId);
       res.json({ success: true });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -134,6 +137,7 @@ router.delete(
         .parse(req.params);
 
       await deleteTask(params.taskId, params.taskListId);
+      WebsocketService.publishUpdateToTaskListSubscribers(params.taskListId);
       res.json({ success: true });
     } catch (error) {
       if (error instanceof z.ZodError) {

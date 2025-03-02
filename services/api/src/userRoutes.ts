@@ -8,7 +8,7 @@ router.get('/whoami', async (req, res) => {
     const user = await getUserById((req.user as any).id);
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Something went wrong fetching user data' });
+    res.status(500).json({message: 'Something went wrong fetching user data'})
   }
 });
 

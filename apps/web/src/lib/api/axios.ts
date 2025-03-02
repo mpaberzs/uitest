@@ -4,6 +4,7 @@ import createAuthRefreshInterceptor from 'axios-auth-refresh';
 const refreshAuthToken = async () => {
   try {
     const response = await axios.get<{ message: string; accessToken: string }>('/v1/auth/refresh', {
+      // TODO: proper url
       baseURL: 'http://host.docker.internal:8000',
       headers: {
         'Content-Type': 'application/json',
@@ -30,6 +31,8 @@ export const axiosInstance = axios.create({
   // FIXME: for some reason axios retry doesn't respect choice of separate instance for refreshing
   withCredentials: true,
 });
+
+export const axiosPublicInstance = axios.create({});
 
 const refreshAuthLogic = (failedRequestError: AxiosError) => {
   return refreshAuthToken().then((token) => {

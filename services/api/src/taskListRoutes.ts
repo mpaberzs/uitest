@@ -16,6 +16,7 @@ import {
 import z from 'zod';
 import { getTaskListTasks } from './lib/models/taskModel';
 import taskListAccessMiddleware from './lib/taskListAccessMiddleware';
+import { WebsocketService } from './lib/websocketService';
 
 const router = Router();
 
@@ -83,7 +84,7 @@ router.post('', async (req, res) => {
   }
 });
 
-router.post(
+router.patch(
   '/:taskListId/:taskListStatus',
   taskListAccessMiddleware(TaskListAccessLevel.write),
   async (req, res) => {
@@ -91,11 +92,18 @@ router.post(
       const params = z
         .object({
           taskListId: z.string().uuid(),
-          taskListStatus: taskStatusSchema
+          taskListStatus: taskStatusSchema,
         })
         .parse(req.params);
 
-      await setTaskListStatus(params.taskListId, params.taskListStatus);
+      const query = z
+        .object({
+          updateRelatedTasks: z.string().transform((value) => value === 'true'),
+        })
+        .parse(req.query);
+
+      await setTaskListStatus(params.taskListId, params.taskListStatus, query.updateRelatedTasks);
+      WebsocketService.publishUpdateToTaskListSubscribers(params.taskListId);
       res.json({ success: true });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -122,6 +130,7 @@ router.patch(
       const body = updateTaskListSchema.parse(req.body);
 
       await updateTaskList(params.taskListId, body);
+      WebsocketService.publishUpdateToTaskListSubscribers(params.taskListId);
       res.json({ success: true });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -146,6 +155,7 @@ router.delete(
         .parse(req.params);
 
       await deleteTaskList(params.taskListId);
+      WebsocketService.publishUpdateToTaskListSubscribers(params.taskListId, 'deleted');
       res.json({ success: true });
     } catch (error) {
       if (error instanceof z.ZodError) {

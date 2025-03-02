@@ -1,10 +1,9 @@
-import { useContext, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { Card, colors, Stack, styled } from '@mui/material';
-import { HttpStatusCode } from 'axios';
-import { whoami } from './lib/api/authApi';
-import { NotificationsProvider } from '@toolpad/core/useNotifications';
+import { useContext, useEffect } from 'react';
 import { UserContext } from './app';
+import { whoami } from './lib/api/authApi';
+import { HttpStatusCode } from 'axios';
 
 const AuthRouteContainer = styled(Stack)(({ theme }) => ({
   height: 'calc((1 - var(--template-frame-height, 0)) * 100dvh)',
@@ -31,6 +30,7 @@ const AuthRoute = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // check if the user actually needs to auth
     let isMounted = true;
     whoami()
       .then((user) => {
@@ -44,11 +44,8 @@ const AuthRoute = () => {
           navigate('/', { replace: true });
       })
       .catch((error: any) => {
-        if (error?.response?.status === HttpStatusCode.Unauthorized) {
-          isMounted && navigate('login', { replace: true });
-        } else {
+        if (error?.response?.status !== HttpStatusCode.Unauthorized) {
           console.error(`error in whoami request: ${error?.response?.data || error?.message}`);
-          isMounted && navigate('error', { replace: true });
         }
       });
 
@@ -58,13 +55,11 @@ const AuthRoute = () => {
   }, []);
 
   return (
-    <NotificationsProvider>
-      <AuthRouteContainer>
-        <AuthRouteCard>
-          <Outlet />
-        </AuthRouteCard>
-      </AuthRouteContainer>
-    </NotificationsProvider>
+    <AuthRouteContainer>
+      <AuthRouteCard>
+        <Outlet />
+      </AuthRouteCard>
+    </AuthRouteContainer>
   );
 };
 
