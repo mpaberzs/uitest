@@ -62,32 +62,6 @@ const TaskList = () => {
   const [isLoading, setIsLoading] = React.useState(true);
   const [fetchTaskListError, setFetchTaskListError] = React.useState('');
 
-  const handleUpdate = React.useCallback(
-    async (e: any) => {
-      if (!taskList) {
-        // safeguard (edge case)
-        return;
-      }
-      try {
-        // TODO: update
-        // await deleteTaskList(taskListId);
-        notifications.show(`Updated task "${taskList.name}" successfully!`, {
-          severity: 'success',
-          autoHideDuration: 10_000,
-        });
-      } catch (error: any) {
-        notifications.show(
-          `Error updating task "${taskList.name}": ${error?.response?.data?.message || error?.message}`,
-          {
-            severity: 'error',
-            autoHideDuration: 10_000,
-          }
-        );
-      }
-    },
-    [updateTaskList, dialogs, notifications, taskList]
-  );
-
   const handleDeleteTask = React.useCallback(
     (taskId: string) => async () => {
       if (!taskList || !taskList.tasks?.find((t) => t.id === taskId)) {
@@ -109,7 +83,7 @@ const TaskList = () => {
       } finally {
       }
     },
-    [deleteTask, dialogs, notifications, taskList]
+    [deleteTask, taskList]
   );
 
   const refreshTaskList = React.useCallback(async () => {
@@ -128,7 +102,7 @@ const TaskList = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [setIsLoading, getTaskList, params.id, setTaskList, setFetchTaskListError, setIsLoading]);
+  }, [getTaskList, params.id]);
 
   const handleInitAddTask = React.useCallback(async () => {
     if (!taskList) {
@@ -148,7 +122,7 @@ const TaskList = () => {
       }
       await refreshTaskList();
     }
-  }, [deleteTaskList, dialogs, notifications, taskList]);
+  }, [deleteTaskList, taskList]);
 
   const handleToggleTaskListDone = React.useCallback(async () => {
     if (!taskList) {
@@ -181,7 +155,7 @@ const TaskList = () => {
       notifications.show(msg, { severity: 'error', autoHideDuration: 10_000 });
     } finally {
     }
-  }, [setTaskListStatus, refreshTaskList, dialogs, notifications, taskList]);
+  }, [setTaskListStatus, taskList]);
 
   const handleToggleTaskDone = React.useCallback(
     (taskId: string) => async () => {
@@ -221,8 +195,18 @@ const TaskList = () => {
       } finally {
       }
     },
-    [updateTask, dialogs, notifications, taskList]
+    [updateTask, taskList]
   );
+
+  const [filterOption, setFilterOption] = React.useState<'all' | 'done'>('all');
+  const filteredTasks = React.useMemo(() => {
+    const tasks = taskList?.tasks || [];
+    if (filterOption === 'all') {
+      return tasks;
+    }
+
+    return tasks.filter((t) => t.status === filterOption);
+  }, [taskList?.tasks, filterOption]);
 
   const handleDeleteTaskList = React.useCallback(async () => {
     if (!taskList) {
@@ -255,17 +239,19 @@ const TaskList = () => {
         }
       );
     }
-  }, [deleteTaskList, dialogs, notifications, taskList]);
+  }, [deleteTaskList, taskList]);
 
   const handleGoBack = React.useCallback(() => {
     navigate('/', { replace: true });
-  }, [navigate]);
+  }, []);
 
   const [inviteLink, setInviteLink] = React.useState<string>();
   const handleCopyInviteLink = React.useCallback(() => {
-    navigator.clipboard.writeText(inviteLink!);
-    notifications.show('Invite link copied to clipboard!');
-  }, [setInviteLink, inviteLink]);
+    if (inviteLink) {
+      navigator.clipboard.writeText(inviteLink);
+      notifications.show('Invite link copied to clipboard!');
+    }
+  }, [inviteLink]);
 
   const handleGenerateInvite = React.useCallback(async () => {
     if (!taskList) {
@@ -352,6 +338,10 @@ const TaskList = () => {
     }
   }, [params.id]);
 
+  const handleToggleFilter = React.useCallback(() => {
+    setFilterOption(filterOption === 'all' ? 'done' : 'all');
+  }, [filterOption]);
+
   return (
     <>
       <Box>
@@ -433,9 +423,12 @@ const TaskList = () => {
                 <Typography component="h2" variant="h3" textAlign="left">
                   Subtasks
                 </Typography>
+                <Button onClick={handleToggleFilter} variant="outlined">
+                  {filterOption === 'all' ? 'Show done tasks' : 'Show all tasks'}
+                </Button>
               </TaskListHeaderBox>
               <Stack sx={{ rowGap: 2 }}>
-                {taskList.tasks!.map((task) => (
+                {filteredTasks.map((task) => (
                   <Card
                     sx={{
                       display: 'flex',

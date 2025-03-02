@@ -70,7 +70,7 @@ const CreateTaskDialog: DialogComponent<any, any> = ({
         );
       }
     },
-    [createTask, onClose, newTaskPayload, setNewTaskPayload, nameError, notifications, payload]
+    [createTask, onClose, newTaskPayload, nameError, payload]
   );
 
   const { taskListName } = payload;

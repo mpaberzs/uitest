@@ -119,22 +119,14 @@ const Dashboard = () => {
         );
       }
     },
-    [
-      nameError,
-      setTaskListName,
-      setTaskListDescription,
-      setTaskLists,
-      notifications,
-      taskListName,
-      taskListDescription,
-    ]
+    [nameError, taskListName, taskListDescription]
   );
 
   const handleOpenTaskList = React.useCallback(
     (taskListId: string) => () => {
       navigate(`tasks/${taskListId}`);
     },
-    [navigate]
+    []
   );
 
   const dialogs = useDialogs();
@@ -174,7 +166,7 @@ const Dashboard = () => {
         );
       }
     },
-    [deleteTaskList, dialogs, notifications, taskLists]
+    [deleteTaskList, taskLists]
   );
 
   const handleToggleTaskListDone = React.useCallback(
@@ -211,7 +203,7 @@ const Dashboard = () => {
       } finally {
       }
     },
-    [setTaskListStatus, refreshTaskLists, dialogs, notifications, taskLists]
+    [setTaskListStatus, taskLists]
   );
 
   React.useEffect(() => {

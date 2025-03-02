@@ -35,8 +35,8 @@ const AcceptInvite = () => {
     }
   }, [params.id]);
 
-  const handleGoToDashboard = useCallback(() => navigate('/', { replace: true }), [navigate]);
-  const handleGoToLogin = useCallback(() => navigate('/login', { replace: true }), [navigate]);
+  const handleGoToDashboard = useCallback(() => navigate('/', { replace: true }), []);
+  const handleGoToLogin = useCallback(() => navigate('/login', { replace: true }), []);
 
   return (
     <>
