@@ -1,11 +1,14 @@
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios, { AxiosError } from 'axios';
 import createAuthRefreshInterceptor from 'axios-auth-refresh';
+
+// FIXME: hardcoded for now
+export const baseURL = 'http://159.65.56.189/api';
 
 const refreshAuthToken = async () => {
   try {
     const response = await axios.get<{ message: string; accessToken: string }>('/v1/auth/refresh', {
       // TODO: proper url
-      baseURL: 'http://host.docker.internal:8000',
+      baseURL,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
@@ -14,14 +17,13 @@ const refreshAuthToken = async () => {
     });
     return response.data;
   } catch (error: any) {
-    console.log('doggo', error.request);
     console.error(error?.response?.data || error?.message);
     throw error;
   }
 };
 
 export const axiosInstance = axios.create({
-  baseURL: 'http://host.docker.internal:8000',
+  baseURL,
   headers: {
     common: {
       'Content-Type': 'application/json',

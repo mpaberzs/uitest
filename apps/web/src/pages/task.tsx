@@ -3,12 +3,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { styled } from '@mui/material/styles';
 import { useNavigate, useParams } from 'react-router';
-import {
-  deleteTaskList,
-  getTaskList,
-  setTaskListStatus,
-  updateTaskList,
-} from 'src/lib/api/taskListsApi';
+import { deleteTaskList, getTaskList, setTaskListStatus } from 'src/lib/api/taskListsApi';
 import type { Task, TaskList } from '@todoiti/common';
 import {
   Button,
@@ -32,7 +27,7 @@ import FileCopyIcon from '@mui/icons-material/FileCopy';
 import CreateTaskDialog from 'src/components/create-task-dialog';
 import { deleteTask, updateTask } from 'src/lib/api/tasksApi';
 import { createInvite } from 'src/lib/api/invitesApi';
-import { axiosInstance } from 'src/lib/api/axios';
+import { axiosInstance, baseURL } from 'src/lib/api/axios';
 import { UserContext } from 'src/app';
 
 const TaskListActionsBoxWrapper = styled(Box)(({ theme }) => ({
@@ -283,8 +278,8 @@ const TaskList = () => {
             return;
           }
           setTaskList(taskList);
-          const url = new URL(`http://localhost:8000/v1/ws/${taskList.id}`);
-          console.log('diggo', axiosInstance.defaults.headers);
+          // FIXME: hardcoded for now
+          const url = new URL(`${baseURL}/v1/ws/${taskList.id}`);
           url.searchParams.set(
             'accessToken',
             // FIXME: implement proper auth hooks
